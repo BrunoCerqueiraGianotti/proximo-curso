@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel de Avaliação</title>
+<script>
+// ================== CONFIGURAÇÃO ==================
+// Mesmo endereço do "App da Web" do Apps Script usado no index.html (termina em /exec).
+// Vazio = o painel mostra DADOS DE EXEMPLO, só para visualizar o layout.
+window.PROXIMO_CURSO_CONFIG = { endpoint: "__ENDPOINT__" };
+// ==================================================
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap">
+<style>
+:root{
+  --bg:#F4F7F3; --surface:#FFFFFF; --ink:#14221C; --muted:#56675F; --line:#D9E2DB; --grid:#E8EEEA;
+  --accent:#0D6A56; --accent-soft:#DCEFE7; --warn-soft:#FBEFD9;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1613; --surface:#16211D; --ink:#E6EEE9; --muted:#9DAEA5; --line:#2A3833; --grid:#22302A;
+  --accent:#52C3A2; --accent-soft:#173A2F; --warn-soft:#33290F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1613; --surface:#16211D; --ink:#E6EEE9; --muted:#9DAEA5; --line:#2A3833; --grid:#22302A;
+  --accent:#52C3A2; --accent-soft:#173A2F; --warn-soft:#33290F; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;padding:0 16px 48px}
+.wrap{max-width:1100px;margin-inline:auto}
+header{display:grid;gap:6px;padding-block:28px 18px}
+h1,h2{font-family:var(--f-display);margin:0;line-height:1.15}
+h1{font-size:clamp(28px,5vw,40px)}
+h2{font-size:19px}
+.sub{color:var(--muted)}
+.aviso{background:var(--warn-soft);border-radius:12px;padding:10px 14px;font-size:15px}
+a{color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-block:18px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:2px}
+.tile .v{font-family:var(--f-display);font-size:34px;font-variant-numeric:tabular-nums}
+.tile .r{font-size:14px;color:var(--muted)}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px;align-content:start;min-width:0}
+.box p.nota{font-size:13.5px;color:var(--muted);margin:0}
+.barras{display:grid;gap:10px}
+.linha{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:3px;align-items:center;font-size:14.5px}
+.linha .rot{grid-column:1 / -1;line-height:1.3}
+.trilho{height:14px;background:var(--grid);border-radius:4px;position:relative}
+.trilho i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:0 4px 4px 0;min-width:2px}
+.linha .val{font-variant-numeric:tabular-nums;color:var(--muted);min-width:3.5em;text-align:right}
+.linha:hover .trilho i{filter:brightness(1.15)}
+.vazio{color:var(--muted);font-size:14.5px}
+svg text{fill:var(--muted);font-size:13px;font-family:var(--f-body)}
+.tt{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:9}
+footer{margin-top:22px;color:var(--muted);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Próximo Curso · avaliação de uso</h1>
+    <p class="sub">Números agregados das visitas ao site, coletados de forma anônima. Projeto Aplicado III · Mackenzie.</p>
+    <p class="sub" id="atualizado"></p>
+    <p class="aviso" id="exemplo" hidden>Coleta ainda não conectada: os números abaixo são <b>dados de exemplo</b>, só para visualizar o painel.</p>
+  </header>
+  <section class="tiles" id="tiles"></section>
+  <section class="grade" id="grade"></section>
+  <footer>O SUS (System Usability Scale) vai de 0 a 100; 68 é a média de referência na literatura. As faixas seguem Bangor, Kortum e Miller (2009).</footer>
+</div>
+<div class="tt" id="tt" role="tooltip"></div>
+<script>
+"use strict";
+const ENDPOINT = String((window.PROXIMO_CURSO_CONFIG || {}).endpoint || "").trim();
+const VALIDO = /^https:\/\/script\.google\.com\/.+\/exec$/.test(ENDPOINT);
+const fmt = (n, d = 0) => n === null || n === undefined ? "–" : Number(n).toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
+const pct = (a, b) => b ? fmt(100 * a / b, 0) + "%" : "–";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const ROTULOS = {
+  modo:{tema:"Já tinha um tema", areas:"Sabia a área", perfil:"Não sabia (perfil)"},
+  objetivo:{primeiro:"Primeiro emprego", mudar:"Mudar de área", crescer:"Crescer onde está", interesse:"Por interesse"},
+  nivel:{"1":"Começando do zero","2":"Sabe o básico","3":"Tem experiência"},
+  idioma:{legenda:"Inglês com legendas", sim:"Inglês sem legenda", es:"Português ou espanhol"},
+  intencao:{sim:"Sim", talvez:"Talvez", nao:"Não"},
+};
+const SUS_CURTO = ["Usaria com frequência","Desnecessariamente complexo","Fácil de usar","Precisaria de ajuda técnica",
+  "Partes bem integradas","Muitas inconsistências","Aprende-se rápido","Trabalhoso de usar","Confiante ao usar","Precisou aprender muito antes"];
+
+// Dados de exemplo (apenas quando a coleta não está ligada)
+const EXEMPLO = {ok:true, atualizado:new Date().toISOString(), sessoes:48, sessoes_com_recomendacao:41, sessoes_com_clique:23,
+  cliques:57, mais_como_este:34, nao_e_pra_mim:19, notas:[1,2,6,15,9], nota_media:3.9, sus_respostas:18, sus_media:76.4,
+  sus_faixas:{"abaixo de 51 (ruim)":1,"51 a 67 (regular)":3,"68 a 80 (bom)":8,"acima de 80 (excelente)":6},
+  sus_itens:[3.6,1.8,4.4,1.6,3.9,1.9,4.5,1.7,4.0,1.5], intencao:{sim:9,talvez:7,nao:2},
+  por_dia:{"2026-10-26":6,"2026-10-27":11,"2026-10-28":9,"2026-10-29":8,"2026-10-30":7},
+  modo:{tema:19,areas:14,perfil:8}, objetivo:{primeiro:9,mudar:13,crescer:12,interesse:7},
+  nivel:{"1":20,"2":15,"3":6}, idioma:{legenda:24,sim:11,es:6},
+  cursos_mais_clicados:[["Machine Learning",7],["Excel Skills for Business: Essentials",5],["The Science of Well-Being",4],["Google Data Analytics",4],["Learning How to Learn",3]],
+  cliques_por_posicao:{"1":16,"2":12,"3":9,"4":7,"5":5,"6":4}};
+
+const tt = document.getElementById("tt");
+document.addEventListener("pointermove", e => {
+  const alvo = e.target.closest("[data-tt]");
+  if (!alvo){ tt.style.opacity = 0; return; }
+  tt.textContent = alvo.dataset.tt; tt.style.opacity = 1;
+  const x = Math.min(e.clientX + 12, innerWidth - tt.offsetWidth - 8);
+  tt.style.left = x + "px"; tt.style.top = (e.clientY + 14) + "px";
+});
+
+function tile(valor, rotulo){ return `<div class="tile"><span class="v">${valor}</span><span class="r">${esc(rotulo)}</span></div>`; }
+
+// barras horizontais: uma série só (cor de destaque), rótulo e valor em texto
+function barras(pares, total, casas = 0){
+  if (!pares.length || !pares.some(p => p[1] > 0)) return `<p class="vazio">Ainda sem respostas.</p>`;
+  const mx = Math.max(...pares.map(p => p[1]));
+  return `<div class="barras">${pares.map(([r, v]) => {
+    const parte = total ? ` (${pct(v, total)})` : "";
+    return `<div class="linha" data-tt="${esc(r)}: ${fmt(v, casas)}${parte}"><span class="rot">${esc(r)}</span>
+      <span class="trilho"><i style="width:${mx ? 100 * v / mx : 0}%"></i></span><span class="val">${fmt(v, casas)}</span></div>`;
+  }).join("")}</div>`;
+}
+const deObj = (o, rot) => Object.entries(o || {}).map(([k, v]) => [rot && rot[k] ? rot[k] : k, v]).sort((a, b) => b[1] - a[1]);
+const soma = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
+
+// linha simples de visitas por dia
+function linhaDias(porDia){
+  const dias = Object.keys(porDia || {}).sort();
+  if (dias.length < 2) return `<p class="vazio">${dias.length ? `${fmt(porDia[dias[0]])} visita(s) em ${dias[0].split("-").reverse().join("/")}.` : "Ainda sem visitas."}</p>`;
+  const W = 420, H = 200, p = {l:30, r:14, t:12, b:26};
+  const vals = dias.map(d => porDia[d]), mx = Math.max(...vals, 1);
+  const x = k => p.l + k * (W - p.l - p.r) / (dias.length - 1), y = v => H - p.b - v * (H - p.t - p.b) / mx;
+  const pontos = vals.map((v, k) => `${x(k)},${y(v)}`).join(" ");
+  const meio = Math.round(mx / 2);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Visitas com recomendação por dia">
+    ${[0, meio, mx].map(v => `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${p.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+    <polyline points="${pontos}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${vals.map((v, k) => `<circle cx="${x(k)}" cy="${y(v)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+      <rect x="${x(k) - 14}" y="${p.t}" width="28" height="${H - p.t - p.b}" fill="transparent" data-tt="${dias[k].split("-").reverse().join("/")}: ${v} visita(s)"/>`).join("")}
+    <text x="${x(0)}" y="${H - 6}" text-anchor="start">${dias[0].slice(8)}/${dias[0].slice(5, 7)}</text>
+    <text x="${x(dias.length - 1)}" y="${H - 6}" text-anchor="end">${dias.at(-1).slice(8)}/${dias.at(-1).slice(5, 7)}</text>
+  </svg>`;
+}
+
+function box(titulo, corpo, nota){ return `<section class="box"><h2>${esc(titulo)}</h2>${corpo}${nota ? `<p class="nota">${nota}</p>` : ""}</section>`; }
+
+function desenhar(r, exemplo){
+  document.getElementById("exemplo").hidden = !exemplo;
+  document.getElementById("atualizado").textContent = "Atualizado em " + new Date(r.atualizado).toLocaleString("pt-BR");
+  const totalNotas = (r.notas || []).reduce((a, b) => a + b, 0);
+  document.getElementById("tiles").innerHTML =
+    tile(fmt(r.sessoes_com_recomendacao), "visitas que receberam recomendações") +
+    tile(pct(r.sessoes_com_clique, r.sessoes_com_recomendacao), "abriram ao menos um curso na Coursera") +
+    tile(r.nota_media ? fmt(r.nota_media, 1) + "<small style='font-size:18px'> / 5</small>" : "–", `utilidade das recomendações (${fmt(totalNotas)} notas)`) +
+    tile(r.sus_media ? fmt(r.sus_media, 1) : "–", `nota de usabilidade SUS, 0 a 100 (${fmt(r.sus_respostas)} respostas)`);
+  const g = [];
+  g.push(box("Visitas por dia", linhaDias(r.por_dia)));
+  g.push(box("Nota das recomendações", barras((r.notas || []).map((v, k) => [`${k + 1} · ${["Nada","Pouco","Mais ou menos","Bastante","Muito"][k]} útil`, v]).reverse(), totalNotas)));
+  g.push(box("Usabilidade (SUS) por faixa", barras(Object.entries(r.sus_faixas || {}), r.sus_respostas),
+    "Acima de 68 é considerado usabilidade acima da média."));
+  g.push(box("Média de cada afirmação do SUS", barras((r.sus_itens || []).map((v, k) => [`${k + 1}. ${SUS_CURTO[k]}`, v === null ? 0 : v]), null, 1),
+    "De 1 a 5. Nas afirmações ímpares, quanto maior melhor; nas pares (negativas), quanto menor melhor."));
+  g.push(box("Pretende fazer algum curso sugerido?", barras(deObj(r.intencao, ROTULOS.intencao), soma(r.intencao))));
+  g.push(box("Momento de carreira", barras(deObj(r.objetivo, ROTULOS.objetivo), soma(r.objetivo))));
+  g.push(box("Como começaram", barras(deObj(r.modo, ROTULOS.modo), soma(r.modo))));
+  g.push(box("Nível declarado", barras(deObj(r.nivel, ROTULOS.nivel), soma(r.nivel))));
+  g.push(box("Idioma preferido", barras(deObj(r.idioma, ROTULOS.idioma), soma(r.idioma))));
+  g.push(box("Cliques por posição na lista", barras(Object.entries(r.cliques_por_posicao || {}).sort((a, b) => +a[0] - +b[0]).map(([k, v]) => [`${k}º curso`, v]), r.cliques),
+    "Se os primeiros recebem mais cliques, a ordem das recomendações faz sentido para quem usa."));
+  g.push(box("Cursos mais abertos", barras(r.cursos_mais_clicados || [])));
+  g.push(box("Interações com a lista", barras([["Abriu na Coursera", r.cliques || 0], ["Mais como este", r.mais_como_este || 0], ["Não é pra mim", r.nao_e_pra_mim || 0]])));
+  document.getElementById("grade").innerHTML = g.join("");
+}
+
+async function carregar(){
+  if (!VALIDO){ desenhar(EXEMPLO, true); return; }
+  try {
+    const resp = await fetch(ENDPOINT + "?resumo=1");
+    const r = await resp.json();
+    if (!r.ok) throw new Error(r.erro || "erro");
+    desenhar(r, false);
+  } catch (e) {
+    document.getElementById("tiles").innerHTML = `<p class="aviso">Não foi possível carregar os dados agora. Tente de novo em instantes.</p>`;
+  }
+}
+carregar();
+</script>
+</body>
+</html>

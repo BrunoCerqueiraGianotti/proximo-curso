@@ -1,0 +1,866 @@
+<title>Próximo Curso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>
+// ================== CONFIGURAÇÃO DA COLETA DE AVALIAÇÕES ==================
+// Cole entre as aspas o endereço do "App da Web" do Google Apps Script
+// (termina em /exec). Vazio = o site funciona normalmente, sem registrar nada.
+window.PROXIMO_CURSO_CONFIG = { endpoint: "__ENDPOINT__" };
+// ===========================================================================
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+/* Layout: uma coluna estreita para as perguntas (lidas uma por vez, no celular),
+   que se abre em grade de cartões só na tela de resultados. */
+:root{
+  --bg:#F4F7F3; --surface:#FFFFFF; --ink:#14221C; --muted:#56675F; --line:#D9E2DB;
+  --accent:#0D6A56; --accent-ink:#FFFFFF; --accent-soft:#DCEFE7; --sun:#C98A0B; --chip:#EBF0EC;
+  --warn:#9A5B00; --warn-soft:#FBEFD9;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1613; --surface:#16211D; --ink:#E6EEE9; --muted:#9DAEA5; --line:#2A3833;
+  --accent:#52C3A2; --accent-ink:#052219; --accent-soft:#173A2F; --sun:#F0BE4A; --chip:#1D2A25;
+  --warn:#F0BE4A; --warn-soft:#33290F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1613; --surface:#16211D; --ink:#E6EEE9; --muted:#9DAEA5; --line:#2A3833;
+  --accent:#52C3A2; --accent-ink:#052219; --accent-soft:#173A2F; --sun:#F0BE4A; --chip:#1D2A25;
+  --warn:#F0BE4A; --warn-soft:#33290F; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;
+  padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:720px;margin-inline:auto}
+.wide{max-width:1060px;margin-inline:auto}
+h1,h2,h3{font-family:var(--f-display);line-height:1.1;text-wrap:balance;margin:0}
+p{margin:0}
+a{color:var(--accent)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+/* topo */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:18px}
+.marca{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:20px;
+  background:none;border:0;padding:0;color:var(--ink)}
+.marca svg{flex:none}
+.top a{font-size:15px;color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink)}
+
+/* abertura */
+.abertura{display:grid;gap:22px;padding-block:28px 40px}
+.selo{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);font-weight:700}
+.abertura h1{font-size:clamp(36px,7vw,60px);font-weight:800;letter-spacing:-.02em}
+.abertura h1 em{font-style:normal;color:var(--accent)}
+.abertura .lead{font-size:19px;color:var(--muted);max-width:34em}
+.numeros{display:flex;flex-wrap:wrap;gap:10px 24px;font-size:15px;color:var(--muted)}
+.numeros b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;border:1.5px solid var(--line);
+  background:var(--surface);padding:12px 22px;font-weight:700;text-decoration:none;color:var(--ink);min-height:48px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.peq{padding:8px 14px;min-height:38px;font-size:15px}
+.acoes{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* perguntas */
+.etapa{padding-block:8px 32px;display:grid;gap:22px}
+.progresso{display:grid;gap:8px}
+.barras{display:flex;gap:6px}
+.barras i{flex:1;height:6px;border-radius:6px;background:var(--line)}
+.barras i.on{background:var(--accent)}
+.passo{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.etapa h2{font-size:clamp(26px,5vw,34px);font-weight:800;letter-spacing:-.01em}
+.dica{color:var(--muted)}
+.opcoes{display:grid;gap:10px}
+.opcoes.grade{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.op{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;background:var(--surface);
+  border:1.5px solid var(--line);border-radius:var(--r);padding:16px 18px;transition:border-color .15s,background .15s}
+.op:hover{border-color:var(--accent)}
+.op[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.op .ic{flex:none;width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;color:var(--accent)}
+.op[aria-pressed="true"] .ic{background:var(--accent);color:var(--accent-ink)}
+.op .tx{display:grid;gap:2px;min-width:0}
+.op .tt{font-weight:700;font-size:17px}
+.op .sb{font-size:14.5px;color:var(--muted)}
+.campo{display:flex;gap:10px;align-items:center;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:6px 6px 6px 16px}
+.campo:focus-within{border-color:var(--accent)}
+.campo input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:18px;color:var(--ink);padding-block:10px;outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:15px}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rotulo{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.sugestoes{display:grid;gap:6px}
+.sug{display:flex;justify-content:space-between;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:10px 14px;font-size:15.5px}
+.sug span:first-child{min-width:0;flex:1}
+.sug span:last-child{color:var(--muted);font-size:13.5px;text-align:right;max-width:40%}
+.sug:hover{border-color:var(--accent)}
+.aviso{background:var(--warn-soft);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:15px}
+.rodape-etapa{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* resultados */
+.res-topo{display:grid;gap:14px;padding-block:8px 20px}
+.res-topo h2{font-size:clamp(28px,5vw,40px);font-weight:800}
+.resumo{display:flex;flex-wrap:wrap;gap:8px}
+.resumo span{background:var(--chip);border-radius:999px;padding:5px 12px;font-size:14.5px}
+.nota{background:var(--accent-soft);border-radius:12px;padding:12px 16px;font-size:15.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:12px;align-content:start;min-width:0}
+.card.curtido{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12.5px;font-weight:700;letter-spacing:.03em;border-radius:6px;padding:3px 8px;background:var(--chip);color:var(--muted)}
+.tag.lang{background:var(--warn-soft);color:var(--warn)}
+.tag.pt{background:var(--accent-soft);color:var(--accent)}
+.card h3{font-family:var(--f-body);font-size:19px;font-weight:700;line-height:1.3}
+.card h3 a{color:var(--ink);text-decoration:none}
+.card h3 a:hover{text-decoration:underline}
+.titulo{display:grid;gap:3px}
+.orig{font-size:13.5px;color:var(--muted);font-style:italic}
+.orig span{font-style:normal;font-weight:700;letter-spacing:.02em}
+.inst{font-size:14.5px;color:var(--muted)}
+.sug small{display:block;font-size:13px;color:var(--muted);font-style:italic}
+.aval{display:flex;align-items:center;gap:8px;font-size:15px;font-variant-numeric:tabular-nums}
+.aval .est{color:var(--sun);letter-spacing:1px}
+.aval .qt{color:var(--muted)}
+.porque{display:grid;gap:6px;margin:0;padding:0;list-style:none;font-size:15px}
+.porque li{display:flex;gap:8px}
+.porque li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px}
+.card .acoes{border-top:1px solid var(--line);padding-top:12px;margin-top:2px}
+.mais{display:flex;justify-content:center;padding-block:22px}
+.avaliar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:grid;gap:14px;margin-top:22px;max-width:640px}
+.avaliar h3{font-family:var(--f-display);font-size:24px;font-weight:800}
+.notas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.notas button{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 4px;display:grid;gap:2px;justify-items:center}
+.notas button b{font-family:var(--f-display);font-size:22px;font-variant-numeric:tabular-nums}
+.notas button span{font-size:12.5px;color:var(--muted)}
+.notas button:hover{border-color:var(--accent)}
+.notas button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.notas button[aria-pressed="true"] span{color:var(--accent-ink)}
+.avaliar label{font-weight:700;font-size:15.5px}
+.avaliar textarea{width:100%;min-height:88px;resize:vertical;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.avaliar textarea:focus{outline:none;border-color:var(--accent)}
+.avaliar .letra{font-size:13.5px;color:var(--muted)}
+.sus-lista{margin:0;padding-left:22px;display:grid;gap:14px}
+.sus-lista li{display:grid;gap:8px}
+.sus-lista p{font-size:15.5px}
+.escala{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.escala span{font-size:12.5px;color:var(--muted)}
+.escala button{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-variant-numeric:tabular-nums}
+.escala button:hover{border-color:var(--accent)}
+.escala button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.intencao{border:0;padding:0;margin:0;display:grid;gap:8px}
+.intencao legend{font-weight:700;font-size:15.5px;padding:0;margin-bottom:8px}
+.obrigado{background:var(--accent-soft);border-radius:var(--r);padding:18px 20px;margin-top:22px;max-width:640px;display:grid;gap:4px}
+/* áreas cobertas (página inicial) */
+.cobertura{display:grid;gap:18px;padding-block:8px 12px}
+.cob-topo{display:grid;gap:8px;max-width:720px}
+.cobertura h2{font-size:clamp(24px,4vw,30px);font-weight:800}
+.areas-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.area-cob{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;row-gap:6px;text-align:left;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:14px 16px;transition:border-color .15s}
+.area-cob:hover{border-color:var(--accent)}
+.area-cob .ic{grid-row:1 / span 2;width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;color:var(--accent)}
+.area-cob .tx{display:grid;gap:2px;min-width:0}
+.area-cob .tt{font-weight:700;font-size:16.5px;line-height:1.3}
+.area-cob .sb{font-size:14px;color:var(--muted)}
+.area-cob .qtd{grid-column:2;font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.area-cob .qtd b{color:var(--accent);font-size:15px}
+.cobertura .letra{font-size:14.5px;color:var(--muted)}
+.vazio{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;display:grid;gap:12px}
+
+/* como funciona */
+.como{border-top:1px solid var(--line);margin-top:28px;padding-block:32px 8px;display:grid;gap:22px}
+.como h2{font-size:28px;font-weight:800}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.passos div{display:grid;gap:6px}
+.passos b{font-family:var(--f-display);font-size:18px}
+.passos p,.como .letra{color:var(--muted);font-size:15.5px}
+.creditos{font-size:14px;color:var(--muted);display:grid;gap:6px}
+
+@media (prefers-reduced-motion: no-preference){
+  .etapa,.res-topo,.cards{animation:surge .28s ease-out}
+  @keyframes surge{from{transform:translateY(6px)}to{transform:none}}
+}
+@media (max-width:520px){
+  body{font-size:16px}
+  .op{padding:14px}
+  .cards{grid-template-columns:1fr}
+  .sug{flex-direction:column;gap:2px}
+  .sug span:last-child{text-align:left;max-width:none}
+}
+</style>
+
+<header class="top wide">
+  <button class="marca" id="marca" type="button" aria-label="Voltar ao início">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="var(--accent)"/><path d="M8 20 L13 14 L17 17 L22 10" fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="10" r="2.4" fill="var(--accent-ink)"/></svg>
+    Próximo Curso
+  </button>
+  <a href="#como-funciona">Como funciona</a>
+</header>
+
+<main id="app"></main>
+
+<section class="como wide" id="como-funciona">
+  <h2>Como funciona</h2>
+  <div class="passos">
+    <div><b>1. Você responde</b><p>Cinco perguntas rápidas sobre o que você quer aprender, seu momento de carreira, seu nível e o idioma das aulas.</p></div>
+    <div><b>2. O modelo compara</b><p>Buscamos cursos pelo assunto e, quando você marca cursos de que gostou, procuramos outros que as mesmas pessoas também avaliaram bem.</p></div>
+    <div><b>3. Você escolhe</b><p>Cada sugestão mostra por que foi indicada. Marque <i>Mais como este</i> ou <i>Não é pra mim</i> e a lista se ajusta na hora.</p></div>
+  </div>
+  <p class="letra">Por trás do site está um sistema de recomendação híbrido treinado com 519.886 avaliações reais de 623 cursos da Coursera (2015 a 2020). Ele combina filtragem colaborativa (KNN entre cursos, peso 0,4) com filtragem baseada em conteúdo (TF-IDF sobre o texto das avaliações, peso 0,6), a combinação que teve o melhor desempenho nos testes do projeto.</p>
+  <p class="letra" id="privacidade">As recomendações são calculadas no seu próprio navegador. Suas respostas não são enviadas nem guardadas.</p>
+  <p class="letra">Como os dados vão até 2020, um curso pode ter mudado de nome, de conteúdo ou saído do catálogo. Confira sempre a página do curso.</p>
+  <div class="creditos">
+    <span>Projeto Aplicado III · Universidade Presbiteriana Mackenzie · 2026</span>
+    <span>Bruno Cerqueira Gianotti · Reginaldo Rogério de Campos · Samya Camily de Santana Silva</span>
+    <span>Base de dados: <a href="https://www.kaggle.com/datasets/imuhammad/course-reviews-on-coursera" target="_blank" rel="noopener">Course Reviews on Coursera (Kaggle)</a></span>
+  </div>
+</section>
+
+<script type="application/json" id="dados">__DADOS__</script>
+<script type="text/plain" id="simcb">__SIMCB__</script>
+<script>
+"use strict";
+// ============================================================
+// Dados do modelo (gerados offline em Python a partir do projeto)
+// cada curso: n=nome original p=nome em português i=instituição u=link r=nota média c=nº de avaliações
+// l=idioma v=nível(1 iniciante,2 intermediário,3 avançado) a=áreas
+// cf=30 vizinhos colaborativos [índice, 1 - distância de cosseno KNN]
+// simcb (bloco separado) = matriz COMPLETA de similaridade TF-IDF entre todos os cursos,
+//   em bytes (0-255 = similaridade 0-1), igual ao notebook, que usa todos os cursos.
+// k=palavras-chave TF-IDF {termo: peso}
+// ============================================================
+const D = JSON.parse(document.getElementById("dados").textContent);
+const N_CURSOS = D.length;
+const SIMCB = (() => {
+  const bin = atob(document.getElementById("simcb").textContent.trim());
+  const arr = new Uint8Array(bin.length);
+  for (let k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+  return arr;
+})();
+const simCB = (i, j) => SIMCB[i * N_CURSOS + j] / 255; // similaridade de conteúdo entre os cursos i e j
+// Para EXPLICAR uma sugestão como "assunto parecido", exigimos que o curso esteja entre os
+// 20 mais parecidos com o curso marcado (o texto das avaliações deixa quase todos um pouco parecidos).
+const LIMIAR_EXPLICA_CB = D.map((_, i) => { const v = []; for (let j = 0; j < N_CURSOS; j++) if (j !== i) v.push(simCB(i, j)); v.sort((a, b) => b - a); return v[19]; });
+// Peso do colaborativo no híbrido. Etapa 3 (notebook v3, seção 8): escolhido em
+// uma validação separada, junto com 30 vizinhos no KNN e TF-IDF só com palavras.
+const ALPHA = 0.4;
+// ------------------------------------------------------------
+// Coleta anônima para avaliar o projeto (Google Planilhas via Apps Script).
+// Registra: respostas do questionário, cursos mostrados, cliques,
+// "Mais como este", "Não é pra mim" e a nota final. Nada de nome ou e-mail.
+// ------------------------------------------------------------
+const ENDPOINT = String((window.PROXIMO_CURSO_CONFIG || {}).endpoint || "").trim();
+const COLETA = /^https:\/\/script\.google\.com\/.+\/exec$/.test(ENDPOINT) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(ENDPOINT);
+const VERSAO = "2.0"; // 2.0 = modelo da Etapa 3 (alfa 0,4; 30 vizinhos) + questionário de usabilidade
+const SESSAO = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const slug = c => (c.u.split("/learn/")[1] || c.u).replace(/[/?#].*$/, "");
+
+const AREAS = {
+  dados:{nome:"Dados e Inteligência Artificial", ex:"Excel, SQL, estatística, machine learning", ic:"chart"},
+  programacao:{nome:"Programação", ex:"Python, Java, web, algoritmos", ic:"code"},
+  ti:{nome:"TI, Nuvem e Segurança", ex:"suporte técnico, AWS, Google Cloud, cibersegurança", ic:"cloud"},
+  negocios:{nome:"Gestão e Negócios", ex:"liderança, projetos, empreendedorismo, RH", ic:"brief"},
+  marketing:{nome:"Marketing e Vendas", ex:"marketing digital, redes sociais, marca", ic:"mega"},
+  financas:{nome:"Finanças e Economia", ex:"finanças pessoais, contabilidade, investimentos", ic:"coin"},
+  saude:{nome:"Saúde", ex:"saúde pública, nutrição, medicina, enfermagem", ic:"heart"},
+  psicologia:{nome:"Psicologia e Bem-estar", ex:"saúde mental, mindfulness, aprender a aprender", ic:"leaf"},
+  idiomas:{nome:"Idiomas e Comunicação", ex:"inglês, escrita, falar em público", ic:"chat"},
+  design:{nome:"Design e Criatividade", ex:"UX, design gráfico, música, fotografia", ic:"pen"},
+  ciencias:{nome:"Ciências e Engenharia", ex:"energia, sustentabilidade, matemática, física", ic:"atom"},
+  humanidades:{nome:"Direito, Sociedade e Educação", ex:"leis, direitos humanos, história, ensino", ic:"book"},
+};
+// quantos cursos há em cada área (um curso pode contar em mais de uma)
+const CONTAGEM_AREA = {};
+D.forEach(c => c.a.forEach(a => { CONTAGEM_AREA[a] = (CONTAGEM_AREA[a] || 0) + 1; }));
+const PERFIS = [
+  {t:"Gosto de resolver problemas com lógica e números", a:["dados","programacao","financas"], ic:"chart"},
+  {t:"Gosto de tecnologia e de entender como as coisas funcionam", a:["ti","programacao","ciencias"], ic:"cloud"},
+  {t:"Gosto de organizar, liderar e fazer as coisas acontecerem", a:["negocios"], ic:"brief"},
+  {t:"Gosto de convencer, vender e criar campanhas", a:["marketing","negocios"], ic:"mega"},
+  {t:"Gosto de cuidar das pessoas", a:["saude","psicologia"], ic:"heart"},
+  {t:"Gosto de criar: desenho, música, escrita, vídeo", a:["design","idiomas"], ic:"pen"},
+  {t:"Gosto de entender a sociedade, as leis e a história", a:["humanidades"], ic:"book"},
+  {t:"Quero me comunicar melhor e aprender idiomas", a:["idiomas"], ic:"chat"},
+];
+const SUGESTOES_TEMA = ["Python","Excel","Análise de dados","Inteligência artificial","Marketing digital","Gestão de projetos",
+  "Liderança","Finanças pessoais","Inglês","UX design","Saúde mental","Programação web","Cibersegurança","Empreendedorismo"];
+
+// Glossário português -> termos em inglês usados nas avaliações (a base é em inglês)
+const GLOSSARIO = {
+  "dados":["data"], "analise de dados":["data","analysis","analytics"], "ciencia de dados":["data","science"],
+  "inteligencia artificial":["ai","artificial","intelligence","machine"], "ia":["ai","machine"],
+  "aprendizado de maquina":["machine","learning"], "machine learning":["machine","ml"], "deep learning":["deep","neural"],
+  "estatistica":["statistics","statistical","probability"], "probabilidade":["probability"], "planilha":["excel","spreadsheet","spreadsheets"],
+  "programacao":["programming","code","coding"], "programar":["programming","code","coding"], "codigo":["code","coding"],
+  "web":["web","html","css","javascript"], "site":["web","html","css","website"], "sites":["web","html","css","website"],
+  "front":["front","react","css"], "aplicativo":["app","android"], "jogos":["game","unity"], "jogo":["game","unity"],
+  "banco de dados":["database","databases","sql"], "nuvem":["cloud","aws","azure"], "seguranca":["security","cybersecurity"],
+  "ciberseguranca":["cybersecurity","security"], "hacker":["security","cybersecurity","hacking"], "redes de computadores":["networking","network"],
+  "suporte tecnico":["support","technical","it"], "suporte":["support","technical"], "informatica":["computer","computers","it"],
+  "cripto":["cryptocurrency","blockchain","bitcoin"], "criptomoeda":["cryptocurrency","bitcoin","blockchain"],
+  "gestao":["management","manager"], "administracao":["management","business"], "lideranca":["leadership","leader","leaders"],
+  "liderar":["leadership","leader"], "gerente":["manager","management"], "projetos":["project","projects"], "projeto":["project","projects"],
+  "agil":["agile","scrum"], "empreendedorismo":["entrepreneurship","startup","entrepreneur"], "empreender":["entrepreneurship","startup"],
+  "abrir empresa":["entrepreneurship","startup","business"], "negocio":["business"], "negocios":["business"],
+  "negociacao":["negotiation","negotiate"], "recursos humanos":["hr","hiring","employees"], "rh":["hr","hiring","employees"],
+  "estrategia":["strategy","strategic"], "vendas":["sales","selling","customer"], "vender":["sales","selling"],
+  "atendimento":["customer","service"], "cliente":["customer","customers"], "marketing digital":["digital","marketing","social"],
+  "redes sociais":["social","media","facebook","instagram"], "publicidade":["advertising","ads"], "marca":["brand","branding"],
+  "financas":["finance","financial"], "financas pessoais":["personal","finance","budget","money"], "dinheiro":["money","finance"],
+  "investimentos":["investment","investing","portfolio"], "investir":["investing","investment"], "contabilidade":["accounting"],
+  "economia":["economics","economy"], "bolsa":["stock","markets","trading"], "mercado financeiro":["markets","trading","financial"],
+  "saude":["health"], "enfermagem":["nursing","nurses"], "nutricao":["nutrition","food","diet"], "alimentacao":["nutrition","food"],
+  "medicina":["medical","medicine","doctors"], "psicologia":["psychology"], "saude mental":["mental","health","anxiety"],
+  "ansiedade":["anxiety","stress","mental"], "estresse":["stress","anxiety"], "bem estar":["happiness","wellbeing"],
+  "felicidade":["happiness","happy"], "meditacao":["mindfulness","meditation"], "autoconhecimento":["purpose","meaning","happiness"],
+  "falar":["speak","speaking","pronunciation"], "conversacao":["speaking","conversation"], "pronuncia":["pronunciation"], "ingles":["english"], "espanhol":["spanish"], "coreano":["korean"], "japones":["japanese"], "chines":["chinese"], "frances":["french"],
+  "escrita":["writing","writer"], "escrever":["writing"], "redacao":["writing","essay"], "gramatica":["grammar"],
+  "oratoria":["speaking","speech","public"], "falar em publico":["speaking","speech","public"], "comunicacao":["communication"],
+  "design":["design"], "ux":["ux","user","experience"], "ui":["ui","interface"], "design grafico":["graphic","design"],
+  "fotografia":["photography","camera","photos"], "musica":["music","musical"], "violao":["guitar"], "guitarra":["guitar"],
+  "video":["video","film","editing"], "edicao de video":["video","editing","final"], "cinema":["film","screenplay"],
+  "arquitetura":["architecture"], "moda":["fashion"], "arte":["art","artists"], "desenho":["drawing","art","design"],
+  "direito":["law","legal"], "leis":["law","legal"], "advogado":["law","lawyer"], "direitos humanos":["human","rights"],
+  "politica":["politics","policy","political"], "historia":["history","historical"], "filosofia":["philosophy"],
+  "educacao":["teaching","education","students"], "ensinar":["teaching","teachers"], "professor":["teaching","teachers"],
+  "aprender a aprender":["learning","learn"], "estudar":["learning","study"], "sustentabilidade":["sustainability","sustainable"],
+  "meio ambiente":["environment","environmental","climate"], "clima":["climate"], "energia":["energy","solar","renewable"],
+  "engenharia":["engineering","engineers"], "fisica":["physics"], "quimica":["chemistry"], "biologia":["biology"],
+  "matematica":["math","mathematics","calculus"], "calculo":["calculus"], "astronomia":["astronomy"], "animais":["animal","animals","dog"],
+  "cachorro":["dog","dogs"], "logistica":["logistics","supply","chain"], "qualidade":["quality","six","sigma"],
+  "produto":["product"], "carreira":["career"], "emprego":["career","job"], "entrevista":["interview","hiring"],
+  "trabalho remoto":["remote"], "produtividade":["productivity"], "office":["office","word","excel"], "power bi":["visualization","data","dashboards"],
+  "visualizacao":["visualization","tableau","charts"], "algoritmos":["algorithms"], "nutricionista":["nutrition"],
+};
+// tema digitado -> área provável (ajuda a desempatar, ex.: "inglês" é Idiomas, não Direito)
+const DICA_AREA = {"ingles":"idiomas","espanhol":"idiomas","coreano":"idiomas","japones":"idiomas","chines":"idiomas","frances":"idiomas",
+  "falar":"idiomas","escrita":"idiomas","redacao":"idiomas","oratoria":"idiomas","python":"programacao","java":"programacao","programacao":"programacao",
+  "programar":"programacao","web":"programacao","site":"programacao","excel":"dados","dados":"dados","sql":"dados","estatistica":"dados",
+  "inteligencia artificial":"dados","machine learning":"dados","marketing":"marketing","vendas":"marketing","lideranca":"negocios","gestao":"negocios",
+  "projetos":"negocios","empreendedorismo":"negocios","financas":"financas","contabilidade":"financas","investimentos":"financas","economia":"financas",
+  "saude":"saude","nutricao":"saude","enfermagem":"saude","psicologia":"psicologia","ansiedade":"psicologia","saude mental":"psicologia",
+  "design":"design","ux":"design","fotografia":"design","musica":"design","direito":"humanidades","leis":"humanidades","historia":"humanidades",
+  "nuvem":"ti","seguranca":"ti","ciberseguranca":"ti","suporte tecnico":"ti","energia":"ciencias","sustentabilidade":"ciencias"};
+function areasDoTema(txt){
+  const t = " " + norm(txt).replace(/[^a-z0-9+# ]/g, " ").replace(/\s+/g, " ") + " ";
+  return [...new Set(Object.entries(DICA_AREA).filter(([pt]) => t.includes(" " + pt + " ")).map(([, a]) => a))];
+}
+const STOP = new Set("a o e de da do das dos em no na nos nas para por com sem um uma uns umas que quero aprender sobre como mais menos ou the and of to in for".split(" "));
+
+// ------------------------------------------------------------
+// utilidades
+// ------------------------------------------------------------
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const $ = (sel, el=document) => el.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtN = n => n >= 1000 ? (n/1000).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil" : String(n);
+// palavras dos títulos (original + português), reduzidas a um "radical" simples
+// (5 primeiras letras) para casar liderança/liderando, pessoal/pessoais etc.
+// Cada radical pesa pelo quanto é raro entre os títulos (IDF): "introdução" pesa pouco.
+const radical = t => t.length >= 6 ? t.slice(0, 5) : t;
+const VAZIAS = new Set("de da do das dos em para com e a o os as ao no na nos um uma the and of to in for with your you".split(" "));
+const NOME_TOK = D.map(c => new Set((norm(c.n) + " " + norm(c.p)).split(/[^a-z0-9+#]+/).filter(t => t.length >= 2 && !VAZIAS.has(t)).map(radical)));
+const DF_NOME = {};
+NOME_TOK.forEach(set => set.forEach(t => { DF_NOME[t] = (DF_NOME[t] || 0) + 1; }));
+const idfNome = t => DF_NOME[t] ? Math.log(D.length / DF_NOME[t]) / Math.log(D.length) : 0;
+const MAX_C = Math.max(...D.map(c => c.c));
+const MEDIA_GLOBAL = 4.6, M_BAYES = 200;
+const QUAL = D.map(c => {
+  if (!c.c) return 0;
+  const bayes = (c.c*c.r + M_BAYES*MEDIA_GLOBAL)/(c.c + M_BAYES);
+  const q = Math.min(1, Math.max(0, (bayes - 4.0)/1.0));
+  const pop = Math.log10(c.c + 1)/Math.log10(MAX_C + 1);
+  return 0.7*q + 0.3*pop;
+});
+
+// ------------------------------------------------------------
+// Etapa de CONTEÚDO para quem digita um tema: transforma o texto
+// em termos (português -> inglês) e compara com as palavras-chave
+// TF-IDF de cada curso + o nome do curso.
+// ------------------------------------------------------------
+function termosDaBusca(txt){
+  const t = " " + norm(txt).replace(/[^a-z0-9+# ]/g, " ").replace(/\s+/g, " ") + " ";
+  const termos = new Set();
+  for (const [pt, en] of Object.entries(GLOSSARIO)) if (t.includes(" " + pt + " ")) en.forEach(x => termos.add(x));
+  t.trim().split(" ").forEach(w => { if (w.length >= 2 && !STOP.has(w)) termos.add(w); });
+  return [...termos];
+}
+// se a pessoa citar um idioma ("inglês"), cursos de OUTROS idiomas saem da frente
+const LINGUAS = {ingles:["english","ingles"], espanhol:["spanish","espanhol"], coreano:["korean","coreano"],
+  japones:["japanese","japones"], chines:["chinese","chines"], frances:["french","frances"]};
+function linguasDaBusca(txt){ const t = " " + norm(txt) + " "; return Object.keys(LINGUAS).filter(k => t.includes(" " + k + " ")); }
+function outraLingua(i, pedidas){
+  return Object.entries(LINGUAS).some(([k, ws]) => !pedidas.includes(k) && ws.some(w => NOME_TOK[i].has(radical(w))));
+}
+function scoreBusca(termos){
+  const s = new Float64Array(D.length);
+  if (!termos.length) return s;
+  D.forEach((c, i) => {
+    let tot = 0, casou = 0;
+    for (const t of termos){
+      let w = c.k[t] || 0;
+      if (!w && t.length >= 5) for (const key in c.k) if (key.startsWith(t)) { w = Math.max(w, c.k[key]*0.8); }
+      const r = radical(t);
+      if (NOME_TOK[i].has(r)) w += 0.8 * idfNome(r);
+      if (w > 0) casou++;
+      tot += w;
+    }
+    // premia quem casa com mais palavras da busca, não só com uma palavra rara
+    s[i] = tot * (0.4 + 0.6 * casou / termos.length);
+  });
+  const mx = Math.max(...s);
+  if (mx > 0) for (let i = 0; i < s.length; i++) s[i] /= mx;
+  return s;
+}
+
+// ------------------------------------------------------------
+// HÍBRIDO (mesma lógica do notebook): soma a similaridade dos
+// vizinhos de cada curso marcado, normaliza (min-max) cada modelo
+// e combina: ALPHA*colaborativo + (1-ALPHA)*conteúdo.
+// Guarda qual curso marcado mais contribuiu, para explicar.
+// ------------------------------------------------------------
+function minmax(arr){
+  let mn = Infinity, mx = -Infinity;
+  arr.forEach(v => { if (v > 0){ mn = Math.min(mn, v); mx = Math.max(mx, v); } });
+  if (mx <= 0) return arr.map(() => 0);
+  if (mx === mn) return arr.map(v => v > 0 ? 1 : 0);
+  return arr.map(v => v > 0 ? (v - mn)/(mx - mn) : 0);
+}
+// Similaridade colaborativa mínima para confiar no vizinho. Cursos com poucas
+// avaliações têm "vizinhos" vindos de 1 ou 2 alunos em comum (similaridade ~0,01),
+// que a normalização min-max esticaria até 1. Abaixo deste limite, ignoramos.
+const MIN_CF = 0.05;
+function hibrido(curtidos, descartados = []){
+  const cf = new Array(D.length).fill(0), cb = new Array(D.length).fill(0);
+  const origem = {};
+  for (const L of curtidos){
+    for (const [j, s] of D[L].cf){ if (s < MIN_CF) continue; cf[j] += s; if (!origem[j] || origem[j].s < s*ALPHA) origem[j] = {L, tipo:"cf", s:s*ALPHA}; }
+    for (let j = 0; j < N_CURSOS; j++){ const s = simCB(L, j); if (!s) continue; cb[j] += s;
+      if (s >= LIMIAR_EXPLICA_CB[L] && (!origem[j] || origem[j].s < s*(1-ALPHA))) origem[j] = {L, tipo:"cb", s:s*(1-ALPHA)}; }
+  }
+  // Etapa 3 (ajuste 4): cursos já marcados ou descartados saem ANTES de normalizar,
+  // para não ocuparem o topo da escala 0-1 de cada modelo.
+  for (const j of [...curtidos, ...descartados]){ cf[j] = 0; cb[j] = 0; }
+  const ncf = minmax(cf), ncb = minmax(cb);
+  const temCf = ncf.some(v => v > 0), temCb = ncb.some(v => v > 0);
+  const h = D.map((_, j) => {
+    if (temCf && temCb) return ALPHA*ncf[j] + (1-ALPHA)*ncb[j];
+    return temCf ? ncf[j] : ncb[j]; // fallback: usa o modelo que conseguiu gerar score
+  });
+  return {h, origem};
+}
+
+// ------------------------------------------------------------
+// Recomendação final: combina o híbrido (se houver cursos marcados),
+// o casamento com tema/áreas e a qualidade (nota bayesiana), com
+// ajustes por nível e idioma. Evita cursos quase iguais em sequência.
+// ------------------------------------------------------------
+function recomendar(st){
+  const termos = st.modo === "tema" ? termosDaBusca(st.tema) : [];
+  const busca = scoreBusca(termos);
+  const areas = st.modo === "perfil" ? [...new Set(st.perfil.flatMap(p => PERFIS[p].a))] : st.modo === "tema" ? areasDoTema(st.tema) : st.areas;
+  const temCriterio = termos.length > 0 || areas.length > 0;
+  const {h, origem} = hibrido(st.curtidos, st.descartados);
+  const temHib = st.curtidos.length > 0;
+  const pedidas = st.modo === "tema" ? linguasDaBusca(st.tema) : [];
+
+  const cand = [];
+  D.forEach((c, i) => {
+    if (st.curtidos.includes(i) || st.descartados.includes(i)) return;
+    let area = 0;
+    if (areas.length){ const k = c.a.findIndex(a => areas.includes(a)); if (k >= 0) area = k === 0 ? 1 : 0.8; }
+    const match = termos.length ? (areas.length ? 0.8*busca[i] + 0.2*area : busca[i]) : area;
+    if (termos.length ? (busca[i] <= 0.05 && h[i] < 0.35) : (temCriterio && match <= 0.05 && h[i] < 0.35)) return;
+    if (!temCriterio && !temHib && QUAL[i] <= 0) return;
+    let s = temHib ? 0.5*h[i] + 0.3*match + 0.2*QUAL[i] : 0.65*match + 0.35*QUAL[i];
+    // nível
+    if (st.nivel === 1) s += c.v === 1 ? 0.12 : c.v === 3 ? -0.15 : 0;
+    if (st.nivel === 2) s += c.v === 2 ? 0.05 : 0;
+    if (st.nivel === 3) s += c.v === 3 ? 0.10 : c.v === 1 ? -0.08 : 0;
+    if ((st.objetivo === "primeiro" || st.objetivo === "mudar") && c.v === 1) s += 0.04;
+    // idioma
+    if (c.l === "fr" || c.l === "ru") s -= 0.6;
+    // legendas: cursos em inglês costumam ter legendas em português na Coursera;
+    // os de espanhol, em geral, só existem em espanhol
+    if (st.idioma === "legenda"){ s += c.l === "pt" ? 0.15 : c.l === "es" ? -0.3 : 0; }
+    if (st.idioma === "es"){ s += c.l === "pt" ? 0.35 : c.l === "es" ? 0.25 : -0.05; }
+    if (!c.c) s -= 0.2;
+    if (pedidas.length && outraLingua(i, pedidas)) s -= 0.5;
+    cand.push({i, s, match, area, busca: busca[i], hib: h[i]});
+  });
+  cand.sort((a, b) => b.s - a.s);
+  // diversidade: penaliza cursos muito parecidos (TF-IDF > 0,8) com os já escolhidos
+  const escolhidos = [], resto = cand.slice(0, 120);
+  while (resto.length && escolhidos.length < 60){
+    resto.forEach(x => {
+      x.ajust = x.s;
+      for (const e of escolhidos){ if (simCB(e.i, x.i) > 0.8){ x.ajust *= 0.85; } }
+      // com várias áreas escolhidas, alterna entre elas em vez de mostrar só uma
+      if (areas.length > 1){ const ar = D[x.i].a.find(a => areas.includes(a)); x.ajust *= Math.pow(0.88, escolhidos.filter(e => D[e.i].a.find(a => areas.includes(a)) === ar).length); }
+    });
+    resto.sort((a, b) => b.ajust - a.ajust);
+    escolhidos.push(resto.shift());
+  }
+  return escolhidos.map(x => ({...x, motivos: motivos(x, st, termos, areas, origem)}));
+}
+
+function motivos(x, st, termos, areas, origem){
+  const c = D[x.i], m = [];
+  const o = origem[x.i];
+  if (o && x.hib > 0.15){
+    const nome = D[o.L].p;
+    m.push(o.tipo === "cf" ? `Quem avaliou bem “${nome}” também avaliou bem este` : `Assunto parecido com “${nome}”, que você marcou`);
+  }
+  if (termos.length && x.busca > 0.25) m.push(`Combina com o que você buscou: “${st.tema.trim()}”`);
+  else if (termos.length && x.busca > 0.05) m.push(`Relacionado ao que você buscou: “${st.tema.trim()}”`);
+  else if (areas.length && x.area > 0) { const a = c.a.find(a => areas.includes(a)); m.push(`Da área ${AREAS[a].nome}`); }
+  if (st.nivel === 1 && c.v === 1) m.push(st.objetivo === "mudar" ? "Bom ponto de partida para quem está mudando de área" : "Indicado para quem está começando");
+  if (st.nivel === 3 && c.v === 3) m.push("Conteúdo mais avançado, para quem já tem experiência");
+  const bayes = c.c ? (c.c*c.r + M_BAYES*MEDIA_GLOBAL)/(c.c + M_BAYES) : 0;
+  if (bayes >= 4.72 && c.c >= 1000) m.push(`Muito bem avaliado: nota ${c.r.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})} em ${fmtN(c.c)} avaliações`);
+  if (c.l === "pt") m.push("Curso em português");
+  if (c.l === "es" && st.idioma === "es") m.push("Curso em espanhol, que você indicou que acompanha");
+  return m.slice(0, 3);
+}
+
+// ------------------------------------------------------------
+// Estado e telas
+// ------------------------------------------------------------
+const INICIAL = () => ({tela:"inicio", passo:0, modo:null, tema:"", areas:[], perfil:[], objetivo:null, nivel:null, idioma:null,
+  curtidos:[], descartados:[], mostrar:6, busca:""});
+let st = INICIAL();
+let lista = [];
+// avaliação da lista atual + questionário de usabilidade (uma vez por visita)
+const novaAv = () => ({nota:null, comentario:"", enviado:false});
+let av = novaAv();
+let usab = {susAberto:false, susEnviado:false, sus:new Array(10).fill(null), intencao:null};
+
+function areasAtuais(){
+  if (st.modo === "perfil") return [...new Set(st.perfil.flatMap(p => PERFIS[p].a))];
+  if (st.modo === "areas") return st.areas;
+  return [];
+}
+function registrar(evento, extra = {}){
+  if (!COLETA) return;
+  const corpo = {sessao:SESSAO, evento, modo:st.modo || "", tema: st.modo === "tema" ? st.tema.trim().slice(0, 120) : "",
+    areas: areasAtuais().join(", "), objetivo: st.objetivo || "", nivel: st.nivel || "", idioma: st.idioma || "",
+    cursos_marcados: st.curtidos.map(i => slug(D[i])).join(" | "), versao: VERSAO, ...extra};
+  try {
+    fetch(ENDPOINT, {method:"POST", mode:"no-cors", keepalive:true,
+      headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(corpo)}).catch(() => {});
+  } catch (e) { /* sem conexão: o site continua funcionando */ }
+}
+function infoCurso(i){ const pos = lista.findIndex(x => x.i === i); return {curso: slug(D[i]), curso_nome: D[i].n, posicao: pos >= 0 ? pos + 1 : ""}; }
+const app = document.getElementById("app");
+
+function passos(){ return ["modo", st.modo === "tema" ? "tema" : st.modo === "perfil" ? "perfil" : "areas", "objetivo", "nivel", "idioma", "feitos"]; }
+
+const ICONES = {
+  chart:'<path d="M4 19V5M4 19h16M8 15v-4M12 15V8M16 15v-6" />', code:'<path d="M9 8l-4 4 4 4M15 8l4 4-4 4" />',
+  cloud:'<path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z" />', brief:'<path d="M4 8h16v11H4zM9 8V5h6v3" />',
+  mega:'<path d="M4 10v4h3l7 4V6l-7 4H4zM18 9a4 4 0 0 1 0 6" />', coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5h4a1.7 1.7 0 0 1 0 3.4h-3a1.7 1.7 0 0 0 0 3.4h4" />',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />', leaf:'<path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7" />',
+  chat:'<path d="M4 5h16v11H9l-5 4z" />', pen:'<path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3" />',
+  atom:'<circle cx="12" cy="12" r="1.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(120 12 12)"/>',
+  book:'<path d="M5 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5zM19 4h-6M19 4v14h-6" />',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>', map:'<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14" />',
+  compass:'<circle cx="12" cy="12" r="8"/><path d="M15 9l-2 4-4 2 2-4z" />', seed:'<path d="M12 20v-7M12 13c0-4 3-6 7-6 0 4-3 6-7 6zM12 13c0-3-2-5-6-5 0 3 2 5 6 5" />',
+  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3" />', up:'<path d="M5 15l7-7 7 7" />', star:'<path d="M12 4l2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8z" />',
+  globe:'<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13.5 0 16M12 4c-2.5 2.5-2.5 13.5 0 16" />',
+  search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5" />',
+};
+const ic = n => `<span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n]||""}</svg></span>`;
+const op = (id, tt, sb, icone, on) => `<button type="button" class="op" data-v="${esc(id)}" aria-pressed="${on?"true":"false"}">${icone?ic(icone):""}<span class="tx"><span class="tt">${esc(tt)}</span>${sb?`<span class="sb">${esc(sb)}</span>`:""}</span></button>`;
+
+function cabecalhoEtapa(){
+  const ps = passos(), n = ps.length, k = st.passo + 1;
+  return `<div class="progresso"><div class="barras">${ps.map((_, j) => `<i class="${j < k ? "on" : ""}"></i>`).join("")}</div><span class="passo">${ps[st.passo]==="feitos" ? "Etapa extra · opcional" : `Pergunta ${k} de ${n - 1}`}</span></div>`;
+}
+function rodape(podeSeguir, rotulo="Continuar"){
+  return `<div class="rodape-etapa"><button type="button" class="btn" data-acao="voltar">Voltar</button>${podeSeguir!==null?`<button type="button" class="btn pri" data-acao="seguir" ${podeSeguir?"":"disabled"}>${rotulo}</button>`:""}</div>`;
+}
+
+function telaInicio(){
+  const total = D.reduce((a, c) => a + c.c, 0);
+  return `<section class="abertura wrap">
+    <span class="selo">Recomendação gratuita · leva 1 minuto</span>
+    <h1>Encontre o <em>próximo curso</em> da sua carreira</h1>
+    <p class="lead">Responda cinco perguntas rápidas e receba cursos online indicados para o seu momento, com base no que milhares de alunos avaliaram.</p>
+    <div class="acoes"><button type="button" class="btn pri" data-acao="comecar">Começar agora</button></div>
+    <div class="numeros"><span><b>${D.length}</b> cursos da Coursera</span><span><b>${total.toLocaleString("pt-BR")}</b> avaliações reais</span><span><b>${Object.keys(AREAS).length}</b> áreas</span></div>
+  </section>
+  <section class="cobertura wide" aria-labelledby="titulo-areas">
+    <div class="cob-topo">
+      <h2 id="titulo-areas">Áreas que o Próximo Curso cobre</h2>
+      <p class="dica">O catálogo reúne ${D.length} cursos da Coursera avaliados entre 2015 e 2020. Algumas áreas têm bem mais cursos que outras, por isso mostramos quantos há em cada uma. Toque em uma área para começar por ela.</p>
+    </div>
+    <div class="areas-grade">${Object.entries(AREAS).map(([k, a]) => [k, a, CONTAGEM_AREA[k] || 0])
+      .sort((x, y) => y[2] - x[2])
+      .map(([k, a, n]) => `<button type="button" class="area-cob" data-area-inicio="${k}">${ic(a.ic)}<span class="tx"><span class="tt">${esc(a.nome)}</span><span class="sb">${esc(a.ex)}</span></span><span class="qtd"><b>${n}</b> cursos</span></button>`).join("")}</div>
+    <p class="letra">Um curso pode estar em mais de uma área. Temas fora destas áreas aparecem pouco na base e podem gerar poucas sugestões.</p>
+  </section>`;
+}
+
+function telaEtapa(){
+  const p = passos()[st.passo];
+  let corpo = "", seguir = null;
+  if (p === "modo"){
+    corpo = `<h2>Você já sabe o que quer aprender?</h2><div class="opcoes">
+      ${op("tema","Sim, tenho um tema em mente","Ex.: Python, Excel, liderança, inglês","target", st.modo==="tema")}
+      ${op("areas","Sei a área, mas não o curso","Escolho uma área e vejo as opções","map", st.modo==="areas")}
+      ${op("perfil","Ainda não sei","Me ajude a descobrir pelo que eu gosto","compass", st.modo==="perfil")}</div>`;
+  }
+  if (p === "tema"){
+    corpo = `<h2>O que você quer aprender?</h2><p class="dica">Escreva em português mesmo. Pode ser uma ferramenta, uma profissão ou um assunto.</p>
+      <label class="campo" for="tema">${ic("search")}<input id="tema" type="text" autocomplete="off" placeholder="Ex.: análise de dados com Python" value="${esc(st.tema)}"></label>
+      <div class="chips">${SUGESTOES_TEMA.map(s => `<button type="button" class="chip" data-tema="${esc(s)}" aria-pressed="${norm(st.tema)===norm(s)}">${esc(s)}</button>`).join("")}</div>`;
+    seguir = st.tema.trim().length >= 2;
+  }
+  if (p === "areas"){
+    corpo = `<h2>Quais áreas te interessam?</h2><p class="dica">Escolha até três.</p><div class="opcoes grade">
+      ${Object.entries(AREAS).map(([k, a]) => op(k, a.nome, a.ex, a.ic, st.areas.includes(k))).join("")}</div>`;
+    seguir = st.areas.length > 0;
+  }
+  if (p === "perfil"){
+    corpo = `<h2>O que mais combina com você?</h2><p class="dica">Escolha até três frases. Vamos sugerir áreas a partir delas.</p><div class="opcoes">
+      ${PERFIS.map((f, j) => op(String(j), f.t, f.a.map(a => AREAS[a].nome).join(" · "), f.ic, st.perfil.includes(j))).join("")}</div>`;
+    seguir = st.perfil.length > 0;
+  }
+  if (p === "objetivo"){
+    corpo = `<h2>Qual é o seu momento?</h2><div class="opcoes">
+      ${op("primeiro","Quero meu primeiro emprego","Começar a carreira com uma base sólida","seed", st.objetivo==="primeiro")}
+      ${op("mudar","Quero mudar de área","Aprender algo novo para uma transição","swap", st.objetivo==="mudar")}
+      ${op("crescer","Quero crescer onde estou","Aprofundar o que já uso no trabalho","up", st.objetivo==="crescer")}
+      ${op("interesse","Quero aprender por interesse","Sem pressa, pelo prazer de aprender","star", st.objetivo==="interesse")}</div>`;
+  }
+  if (p === "nivel"){
+    corpo = `<h2>Quanto você já sabe sobre isso?</h2><div class="opcoes">
+      ${op("1","Estou começando do zero","Prefiro cursos introdutórios","seed", st.nivel===1)}
+      ${op("2","Já sei o básico","Quero ir um passo além","up", st.nivel===2)}
+      ${op("3","Já tenho experiência","Quero conteúdo mais avançado","star", st.nivel===3)}</div>`;
+  }
+  if (p === "idioma"){
+    corpo = `<h2>Como você prefere estudar?</h2>
+      <p class="aviso">Quase todos os cursos são em inglês, mas muitos têm legendas em português na Coursera, inclusive traduzidas automaticamente. Já os cursos em espanhol, em geral, só existem em espanhol.</p>
+      <div class="opcoes">
+      ${op("legenda","Em inglês, com legendas em português","Mostrar cursos em inglês e em português, sem os de espanhol na frente","chat", st.idioma==="legenda")}
+      ${op("sim","Em inglês, sem precisar de legenda","Mostrar todos os cursos","globe", st.idioma==="sim")}
+      ${op("es","Em português ou espanhol","Mostrar esses primeiro, mesmo que sejam poucos","book", st.idioma==="es")}</div>`;
+  }
+  if (p === "feitos"){
+    const q = norm(st.busca.trim());
+    let sug = [];
+    if (q.length >= 2) sug = D.map((c, i) => ({c, i})).filter(x => (norm(x.c.n).includes(q) || norm(x.c.p).includes(q)) && !st.curtidos.includes(x.i)).sort((a, b) => b.c.c - a.c.c).slice(0, 7);
+    corpo = `<h2>Já fez algum curso online e gostou?</h2>
+      <p class="dica">Se encontrar na lista um curso que você fez e gostou, marque. Assim o modelo compara você com alunos que avaliaram os mesmos cursos. Pode buscar em português ou pelo nome original em inglês.</p>
+      <label class="campo" for="busca">${ic("search")}<input id="busca" type="text" autocomplete="off" placeholder="Ex.: excel, marketing, psicologia" value="${esc(st.busca)}"></label>
+      ${st.curtidos.length ? `<div class="chips">${st.curtidos.map(i => `<button type="button" class="chip" aria-pressed="true" data-tirar="${i}" aria-label="Remover ${esc(D[i].p)}">${esc(D[i].p)} ✕</button>`).join("")}</div>` : ""}
+      <div class="sugestoes">${sug.map(x => `<button type="button" class="sug" data-curtir="${x.i}"><span>${esc(x.c.p)}${x.c.p !== x.c.n ? `<small>${esc(x.c.n)}</small>` : ""}</span><span>${esc(x.c.i)}</span></button>`).join("")}
+      ${q.length >= 2 && !sug.length ? `<p class="dica">Nenhum curso com esse nome. Tente outra palavra.</p>` : ""}</div>`;
+    seguir = true;
+    return `<section class="etapa wrap">${cabecalhoEtapa()}${corpo}${rodape(true, st.curtidos.length ? "Ver recomendações" : "Pular e ver recomendações")}</section>`;
+  }
+  return `<section class="etapa wrap">${cabecalhoEtapa()}${corpo}${rodape(seguir)}</section>`;
+}
+
+function estrelas(r){ const n = Math.round(r); return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
+function card(x){
+  const c = D[x.i], curt = st.curtidos.includes(x.i);
+  const nivelTx = ["", "Iniciante", "Intermediário", "Avançado"][c.v];
+  const lang = c.l === "pt" ? `<span class="tag pt">Em português</span>`
+    : c.l === "es" ? `<span class="tag lang">Só em espanhol</span>`
+    : c.l === "fr" ? `<span class="tag lang">Em francês</span>` : c.l === "ru" ? `<span class="tag lang">Em russo</span>`
+    : (st.idioma !== "sim" ? `<span class="tag lang">Em inglês · veja as legendas</span>` : `<span class="tag">Em inglês</span>`);
+  return `<article class="card${curt?" curtido":""}">
+    <div class="tags"><span class="tag">${esc(AREAS[c.a[0]].nome)}</span><span class="tag">${nivelTx}</span>${lang}</div>
+    <div class="titulo"><h3><a href="${esc(c.u)}" target="_blank" rel="noopener" data-clique="${x.i}">${esc(c.p)}</a></h3>
+      ${c.p !== c.n ? `<p class="orig"><span>Na Coursera:</span> ${esc(c.n)}</p>` : ""}<p class="inst">${esc(c.i)}</p></div>
+    ${c.c ? `<div class="aval"><span class="est" aria-hidden="true">${estrelas(c.r)}</span><b>${c.r.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}</b><span class="qt">${c.c.toLocaleString("pt-BR")} avaliações</span></div>` : `<div class="aval"><span class="qt">Ainda sem avaliações na base</span></div>`}
+    ${x.motivos.length ? `<ul class="porque">${x.motivos.map(m => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
+    <div class="acoes">
+      <a class="btn pri peq" href="${esc(c.u)}" target="_blank" rel="noopener" data-clique="${x.i}">Ver na Coursera ↗</a>
+      <button type="button" class="btn peq" data-curtir-res="${x.i}" aria-pressed="${curt}">${curt ? "✓ Marcado" : "Mais como este"}</button>
+      <button type="button" class="btn peq" data-descartar="${x.i}">Não é pra mim</button>
+    </div></article>`;
+}
+
+function resumoRespostas(){
+  const r = [];
+  if (st.modo === "tema") r.push(`Tema: ${st.tema.trim()}`);
+  if (st.modo === "areas") r.push(...st.areas.map(a => AREAS[a].nome));
+  if (st.modo === "perfil") r.push(...[...new Set(st.perfil.flatMap(p => PERFIS[p].a))].map(a => AREAS[a].nome));
+  r.push({primeiro:"Primeiro emprego", mudar:"Mudança de área", crescer:"Crescer onde estou", interesse:"Por interesse"}[st.objetivo]);
+  r.push(["", "Começando do zero", "Já sei o básico", "Tenho experiência"][st.nivel]);
+  r.push({sim:"Inglês sem legenda", legenda:"Inglês com legendas", es:"Português ou espanhol"}[st.idioma]);
+  if (st.curtidos.length) r.push(`${st.curtidos.length} curso${st.curtidos.length > 1 ? "s" : ""} marcado${st.curtidos.length > 1 ? "s" : ""}`);
+  return r.filter(Boolean);
+}
+
+function telaResultado(){
+  const vis = lista.slice(0, st.mostrar);
+  const temPt = vis.some(x => D[x.i].l === "pt" || D[x.i].l === "es");
+  return `<section class="res-topo wide">
+      <h2>Seus próximos cursos</h2>
+      <div class="resumo">${resumoRespostas().map(t => `<span>${esc(t)}</span>`).join("")}</div>
+      ${st.curtidos.length
+        ? `<p class="nota">${st.curtidos.length > 1 ? `A lista usa os ${st.curtidos.length} cursos que você marcou` : "A lista usa o curso que você marcou"}: o modelo procura cursos que os mesmos alunos também avaliaram bem e cursos de assunto parecido.</p>`
+        : `<p class="nota">Marque <b>Mais como este</b> nos cursos que te interessarem. A lista se ajusta na hora, usando o histórico de alunos com gostos parecidos.</p>`}
+      ${st.idioma === "es" && !temPt ? `<p class="aviso">Não encontramos cursos em português ou espanhol para esta busca. Mostramos os melhores em inglês: muitos têm legendas em português.</p>` : ""}
+      ${st.idioma !== "sim" ? `<p class="aviso">Os títulos estão traduzidos para facilitar. Na página do curso, ative as legendas em português no player do vídeo, quando estiverem disponíveis.</p>` : ""}
+      <div class="acoes"><button type="button" class="btn peq" data-acao="editar">Mudar respostas</button><button type="button" class="btn peq" data-acao="refazer">Começar de novo</button></div>
+    </section>
+    <section class="wide">
+      ${vis.length ? `<div class="cards">${vis.map(card).join("")}</div>`
+        : `<div class="vazio"><b>Não encontramos cursos com essa combinação.</b><p class="dica">Tente outro tema, escolha mais áreas ou mude o nível.</p><div class="acoes"><button type="button" class="btn pri peq" data-acao="editar">Mudar respostas</button></div></div>`}
+      ${lista.length > st.mostrar ? `<div class="mais"><button type="button" class="btn" data-acao="mais">Ver mais cursos</button></div>` : ""}
+      ${COLETA && vis.length ? blocoAvaliacao() : ""}
+    </section>`;
+}
+
+// ------------------------------------------------------------
+// Questionário de usabilidade SUS (System Usability Scale, Brooke, 1996):
+// 10 afirmações de 1 (discordo totalmente) a 5 (concordo totalmente).
+// Ímpares são positivas, pares são negativas. Resultado de 0 a 100;
+// acima de 68 é considerado acima da média.
+// ------------------------------------------------------------
+const SUS = [
+  "Eu acho que gostaria de usar este site com frequência.",
+  "Eu achei o site desnecessariamente complexo.",
+  "Eu achei o site fácil de usar.",
+  "Eu acho que precisaria da ajuda de alguém com conhecimento técnico para usar o site.",
+  "Eu achei que as partes do site funcionam bem juntas.",
+  "Eu achei que o site tem muitas inconsistências.",
+  "Eu imagino que a maioria das pessoas aprenderia a usar este site rapidamente.",
+  "Eu achei o site muito trabalhoso de usar.",
+  "Eu me senti confiante usando o site.",
+  "Eu precisei aprender várias coisas antes de conseguir usar o site.",
+];
+function notaSUS(r){ return r.reduce((t, v, k) => t + (k % 2 === 0 ? v - 1 : 5 - v), 0) * 2.5; }
+
+function blocoSUS(){
+  if (usab.susEnviado) return `<div class="obrigado" role="status"><b>Muito obrigado!</b><span>Suas respostas vão compor a avaliação de usabilidade do projeto.</span></div>`;
+  if (!usab.susAberto) return `<div class="obrigado"><b>Obrigado pela avaliação!</b><span>Tem mais 1 minuto? Responda 10 afirmações rápidas sobre o site. Isso nos ajuda a medir se ele é fácil de usar.</span>
+    <div class="acoes" style="margin-top:8px"><button type="button" class="btn pri peq" data-acao="abrir-sus">Responder</button></div></div>`;
+  const faltam = usab.sus.filter(v => v === null).length;
+  return `<section class="avaliar sus" aria-labelledby="titulo-sus">
+    <h3 id="titulo-sus">Como foi usar o site?</h3>
+    <p class="dica">Para cada frase, escolha de 1 (discordo totalmente) a 5 (concordo totalmente).</p>
+    <ol class="sus-lista">${SUS.map((t, k) => `<li><p>${esc(t)}</p>
+      <div class="escala" role="group" aria-label="Afirmação ${k + 1}"><span>Discordo</span>${[1,2,3,4,5].map(n => `<button type="button" data-sus="${k}" data-v="${n}" aria-pressed="${usab.sus[k] === n}" aria-label="${n}">${n}</button>`).join("")}<span>Concordo</span></div></li>`).join("")}</ol>
+    <fieldset class="intencao"><legend>Você pretende fazer algum dos cursos sugeridos?</legend>
+      <div class="chips">${[["sim","Sim"],["talvez","Talvez"],["nao","Não"]].map(([v, t]) => `<button type="button" class="chip" data-intencao="${v}" aria-pressed="${usab.intencao === v}">${t}</button>`).join("")}</div></fieldset>
+    <div class="acoes"><button type="button" class="btn pri" data-acao="enviar-sus" ${faltam || !usab.intencao ? "disabled" : ""}>Enviar respostas</button>
+      ${faltam ? `<span class="letra">Faltam ${faltam} de 10</span>` : ""}</div>
+  </section>`;
+}
+
+function blocoAvaliacao(){
+  if (av.enviado) return blocoSUS();
+  const rot = ["", "Nada", "Pouco", "Mais ou menos", "Bastante", "Muito"];
+  return `<section class="avaliar" aria-labelledby="titulo-avaliar">
+    <h3 id="titulo-avaliar">Essas recomendações foram úteis?</h3>
+    <div class="notas" role="group" aria-label="Nota de 1 a 5">${[1,2,3,4,5].map(n => `<button type="button" data-nota="${n}" aria-pressed="${av.nota === n}"><b>${n}</b><span>${rot[n]}</span></button>`).join("")}</div>
+    <label for="comentario">Quer contar algo? <span class="dica">(opcional)</span></label>
+    <textarea id="comentario" maxlength="500" placeholder="Ex.: encontrei o que procurava; senti falta de cursos sobre...">${esc(av.comentario)}</textarea>
+    <p class="letra">Não escreva nome, e-mail ou telefone. A avaliação é anônima e serve só para o projeto acadêmico.</p>
+    <div class="acoes"><button type="button" class="btn pri" data-acao="enviar-avaliacao" ${av.nota ? "" : "disabled"}>Enviar avaliação</button></div>
+  </section>`;
+}
+
+function render(foco){
+  if (st.tela === "inicio") app.innerHTML = telaInicio();
+  else if (st.tela === "etapa") app.innerHTML = telaEtapa();
+  else app.innerHTML = telaResultado();
+  if (foco){ const el = document.getElementById(foco); if (el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+}
+function irPara(tela, passo){ st.tela = tela; if (passo !== undefined) st.passo = passo; render(); window.scrollTo({top:0}); }
+function atualizarLista(){ lista = recomendar(st); }
+function seguir(){
+  const ps = passos();
+  if (st.passo < ps.length - 1) irPara("etapa", st.passo + 1);
+  else {
+    st.mostrar = 6; atualizarLista(); av = {nota:null, comentario:"", enviado:false};
+    registrar("recomendacao", {lista_exibida: lista.slice(0, 6).map(x => slug(D[x.i])).join(" | ")});
+    irPara("resultado");
+  }
+}
+
+app.addEventListener("click", e => {
+  const link = e.target.closest("a[data-clique]");
+  if (link){ registrar("clique_coursera", infoCurso(+link.dataset.clique)); return; }
+  const b = e.target.closest("button"); if (!b) return;
+  const acao = b.dataset.acao;
+  if (acao === "comecar"){ st = INICIAL(); irPara("etapa", 0); return; }
+  if (b.dataset.areaInicio !== undefined){ st = INICIAL(); st.modo = "areas"; st.areas = [b.dataset.areaInicio]; irPara("etapa", 1); return; }
+  if (acao === "voltar"){ if (st.passo === 0) irPara("inicio"); else irPara("etapa", st.passo - 1); return; }
+  if (acao === "seguir"){ seguir(); return; }
+  if (acao === "editar"){ irPara("etapa", 0); return; }
+  if (acao === "refazer"){ st = INICIAL(); irPara("etapa", 0); return; }
+  if (acao === "mais"){ st.mostrar += 6; registrar("ver_mais", {lista_exibida: lista.slice(st.mostrar - 6, st.mostrar).map(x => slug(D[x.i])).join(" | ")}); render(); return; }
+  if (b.dataset.nota !== undefined){
+    av.nota = +b.dataset.nota;
+    document.querySelectorAll("[data-nota]").forEach(x => x.setAttribute("aria-pressed", x === b));
+    const env = $('[data-acao="enviar-avaliacao"]'); if (env) env.disabled = false; return;
+  }
+  if (acao === "enviar-avaliacao"){
+    if (!av.nota) return;
+    registrar("avaliacao", {nota: av.nota, comentario: av.comentario.trim().slice(0, 500), lista_exibida: lista.slice(0, st.mostrar).map(x => slug(D[x.i])).join(" | ")});
+    av.enviado = true; const y = window.scrollY; render(); window.scrollTo({top:y}); return;
+  }
+  // questionário de usabilidade
+  const manter = () => { const y = window.scrollY; render(); window.scrollTo({top:y}); };
+  if (acao === "abrir-sus"){ usab.susAberto = true; manter(); return; }
+  if (b.dataset.sus !== undefined){ usab.sus[+b.dataset.sus] = +b.dataset.v; manter(); return; }
+  if (b.dataset.intencao !== undefined){ usab.intencao = b.dataset.intencao; manter(); return; }
+  if (acao === "enviar-sus"){
+    if (usab.sus.includes(null) || !usab.intencao) return;
+    const extra = {sus_score: notaSUS(usab.sus), intencao: usab.intencao};
+    usab.sus.forEach((v, k) => { extra["sus_" + (k + 1)] = v; });
+    registrar("usabilidade", extra);
+    usab.susEnviado = true; manter(); return;
+  }
+  if (b.dataset.tema !== undefined){ st.tema = b.dataset.tema; render(); return; }
+  if (b.dataset.curtir !== undefined){ st.curtidos.push(+b.dataset.curtir); st.busca = ""; render("busca"); return; }
+  if (b.dataset.tirar !== undefined){ st.curtidos = st.curtidos.filter(i => i !== +b.dataset.tirar); render(); return; }
+  if (b.dataset.curtirRes !== undefined){
+    const i = +b.dataset.curtirRes;
+    registrar(st.curtidos.includes(i) ? "desmarcou" : "mais_como_este", infoCurso(i));
+    st.curtidos = st.curtidos.includes(i) ? st.curtidos.filter(x => x !== i) : [...st.curtidos, i];
+    const y = window.scrollY; atualizarLista(); render(); window.scrollTo({top:y}); return;
+  }
+  if (b.dataset.descartar !== undefined){
+    registrar("nao_e_pra_mim", infoCurso(+b.dataset.descartar));
+    st.descartados.push(+b.dataset.descartar); st.curtidos = st.curtidos.filter(x => x !== +b.dataset.descartar);
+    const y = window.scrollY; atualizarLista(); render(); window.scrollTo({top:y}); return;
+  }
+  if (b.classList.contains("op")){
+    const p = passos()[st.passo], v = b.dataset.v;
+    const multi = (arr, val, max=3) => arr.includes(val) ? arr.filter(x => x !== val) : arr.length < max ? [...arr, val] : arr;
+    if (p === "modo"){ if (st.modo !== v){ st.areas = []; st.perfil = []; } st.modo = v; render(); setTimeout(seguir, 160); return; }
+    if (p === "areas"){ st.areas = multi(st.areas, v); render(); return; }
+    if (p === "perfil"){ st.perfil = multi(st.perfil, +v); render(); return; }
+    if (p === "objetivo"){ st.objetivo = v; render(); setTimeout(seguir, 160); return; }
+    if (p === "nivel"){ st.nivel = +v; render(); setTimeout(seguir, 160); return; }
+    if (p === "idioma"){ st.idioma = v; render(); setTimeout(seguir, 160); return; }
+  }
+});
+app.addEventListener("input", e => {
+  if (e.target.id === "tema"){ st.tema = e.target.value; const b = $('[data-acao="seguir"]'); if (b) b.disabled = st.tema.trim().length < 2;
+    document.querySelectorAll("[data-tema]").forEach(c => c.setAttribute("aria-pressed", norm(c.dataset.tema) === norm(st.tema))); }
+  if (e.target.id === "busca"){ st.busca = e.target.value; render("busca"); }
+  if (e.target.id === "comentario"){ av.comentario = e.target.value; }
+});
+app.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.id === "tema" && st.tema.trim().length >= 2) seguir();
+});
+document.getElementById("marca").addEventListener("click", () => { st = INICIAL(); irPara("inicio"); });
+
+if (COLETA) document.getElementById("privacidade").textContent =
+  "As recomendações são calculadas no seu navegador. Para avaliar o projeto, registramos de forma anônima as respostas do questionário, os cursos mostrados, os cliques, a nota que você der e, se você quiser responder, o questionário de usabilidade. Não coletamos nome, e-mail nem qualquer dado que identifique você.";
+render();
+</script>
