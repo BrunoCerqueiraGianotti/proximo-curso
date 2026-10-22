@@ -27,7 +27,10 @@ cabeca = ('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
           '<meta name="description" content="Recomendador de cursos online para desenvolvimento profissional - Projeto Aplicado III, Mackenzie">'
           '<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}'
           'body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>')
-open(os.path.join(saida, "index.html"), "w", encoding="utf-8").write(cabeca + html_github + "</body></html>")
+# o <title> do template vai para dentro do <head>
+titulo = html_github[:html_github.index("</title>") + len("</title>")]
+corpo = html_github[len(titulo):]
+open(os.path.join(saida, "index.html"), "w", encoding="utf-8").write(cabeca.replace("</head>", titulo + "</head>") + corpo + "</body></html>")
 # painel de avaliação (lê só números agregados do Apps Script)
 painel = open(f"{pasta}/painel.html", encoding="utf-8").read().replace("__ENDPOINT__", endpoint)
 open(os.path.join(saida, "painel.html"), "w", encoding="utf-8").write(painel)
