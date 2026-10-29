@@ -15,6 +15,7 @@ Bruno Cerqueira Gianotti · Reginaldo Rogério de Campos · Samya Camily de Sant
 | Site para a comunidade | https://brunocerqueiragianotti.github.io/proximo-curso/ |
 | Painel de avaliação de uso | https://brunocerqueiragianotti.github.io/proximo-curso/painel.html |
 | Notebook atual (Etapa 3) | [`etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb`](etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb) |
+| Abrir o notebook no Colab | [![Abrir no Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/BrunoCerqueiraGianotti/proximo-curso/blob/main/etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb) |
 | Base de dados | [Course Reviews on Coursera (Kaggle)](https://www.kaggle.com/datasets/imuhammad/course-reviews-on-coursera) |
 
 ## O projeto
@@ -63,7 +64,7 @@ proximo-curso/
 
 ## Como reproduzir
 
-1. **Notebook:** abra `etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb` no Google Colab e execute todas as células. O notebook baixa a base do Kaggle sozinho. Se não houver credencial do Kaggle, ele pede o upload dos dois CSVs.
+1. **Notebook:** clique no botão "Open in Colab" acima (abre a versão do GitHub direto no Google Colab) e execute todas as células. O notebook baixa a base do Kaggle sozinho. Se não houver credencial do Kaggle, ele pede o upload dos dois CSVs.
 2. **Site:** veja [`site/README.md`](site/README.md).
 
 ## Privacidade
