@@ -49,7 +49,7 @@ proximo-curso/
 ├── etapa-1-concepcao/            documento da Etapa 1
 ├── etapa-2-prova-de-conceito/    documento e notebook da Etapa 2 (prova de conceito)
 ├── etapa-3-metodologia/          documento, apresentação, notebooks v2 e v3, fluxograma e resultados
-├── etapa-4-resultados/           (próxima etapa)
+├── etapa-4-resultados/           documento final, apresentação e análises dos resultados
 └── dados/                        como obter a base de dados
 ```
 
@@ -60,7 +60,7 @@ proximo-curso/
 | 1. Concepção | [`etapa-1-concepcao`](etapa-1-concepcao) | Tema, contexto, objetivos, base de dados e objetivo extensionista |
 | 2. Prova de conceito | [`etapa-2-prova-de-conceito`](etapa-2-prova-de-conceito) | Bibliotecas, análise exploratória, limpeza, modelos de conteúdo, colaborativo e híbrido (α = 0,6), Precision@5 e Recall@5 |
 | 3. Metodologia | [`etapa-3-metodologia`](etapa-3-metodologia) | Ajustes no pipeline (vazamento de dados, baseline, amostra, normalização), escolha de parâmetros em validação, NDCG e K = 10, metodologia com fluxograma, site com avaliação de usabilidade |
-| 4. Resultados | [`etapa-4-resultados`](etapa-4-resultados) | Em andamento: resultados, discussão e análise do uso real do site |
+| 4. Resultados | [`etapa-4-resultados`](etapa-4-resultados) | Documento final, resultados, avaliação com a comunidade e conclusões |
 
 ## Como reproduzir
 
