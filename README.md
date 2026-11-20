@@ -17,6 +17,9 @@ Bruno Cerqueira Gianotti · Reginaldo Rogério de Campos · Samya Camily de Sant
 | Notebook atual (Etapa 3) | [`etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb`](etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb) |
 | Abrir o notebook no Colab | [![Abrir no Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/BrunoCerqueiraGianotti/proximo-curso/blob/main/etapa-3-metodologia/Projeto_Recomendacao_Cursos_v3.ipynb) |
 | Base de dados | [Course Reviews on Coursera (Kaggle)](https://www.kaggle.com/datasets/imuhammad/course-reviews-on-coursera) |
+| Documento final (Etapa 4) | [`etapa-4-resultados/Projeto_Aplicado_III_Etapa4.pdf`](etapa-4-resultados/Projeto_Aplicado_III_Etapa4.pdf) |
+| Vídeo de apresentação do projeto | https://www.youtube.com/watch?v=uf3b11qDDcQ |
+| Vídeo da aplicação na comunidade | https://www.youtube.com/watch?v=ji7cZiH5KbM |
 
 ## O projeto
 

@@ -29,5 +29,5 @@ Para reproduzir as análises: `python analise_etapa4.py Coursera_courses.csv Cou
 
 ## Vídeos
 
-- Apresentação do projeto: _link a incluir_
-- Aplicação na comunidade: _link a incluir_
+- Apresentação do projeto: https://www.youtube.com/watch?v=uf3b11qDDcQ
+- Aplicação na comunidade (CEPAC, Barueri): https://www.youtube.com/watch?v=ji7cZiH5KbM
